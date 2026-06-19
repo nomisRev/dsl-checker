@@ -43,6 +43,18 @@ public class JvmDiagnosticTestGenerated extends AbstractJvmDiagnosticTest {
   }
 
   @Test
+  @TestMetadata("requiredMessage.kt")
+  public void testRequiredMessage() {
+    run("requiredMessage.kt");
+  }
+
+  @Test
+  @TestMetadata("requiredMessages.kt")
+  public void testRequiredMessages() {
+    run("requiredMessages.kt");
+  }
+
+  @Test
   @TestMetadata("simple.kt")
   public void testSimple() {
     run("simple.kt");

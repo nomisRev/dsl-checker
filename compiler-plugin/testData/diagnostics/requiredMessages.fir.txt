@@ -1,0 +1,33 @@
+FILE: requiredMessages.kt
+    package foo.bar
+
+    @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() public final fun dataSource(block: R|foo/bar/DataSourceConfiguration.() -> kotlin/Unit|): R|foo/bar/DataSource| {
+        ^dataSource R|kotlin/TODO|()
+    }
+    public final class DataSource : R|kotlin/Any| {
+        public constructor(): R|foo/bar/DataSource| {
+            super<R|kotlin/Any|>()
+        }
+
+    }
+    public final class DataSourceConfiguration : R|kotlin/Any| {
+        public constructor(): R|foo/bar/DataSourceConfiguration| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|(message = String(URL is required) [evaluated = String(URL is required)]) public final var url: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|(message = String(Username is required) [evaluated = String(Username is required)]) public final var username: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+    }
+    public final fun test(): R|kotlin/Unit| {
+        R|foo/bar/dataSource|(<L> = dataSource@fun R|foo/bar/DataSourceConfiguration|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@dataSource Unit
+        }
+        )
+    }
+
