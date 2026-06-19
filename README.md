@@ -1,29 +1,73 @@
-# Kotlin Compiler Plugin template
+# Kotlin DSL Checker Compiler Plugin
 
-This is a template project for writing a compiler plugin for the Kotlin compiler.
+This repository contains a Kotlin compiler plugin that performs **compile-time validation for DSL builders**.
 
-## Details
+The plugin introduces two runtime annotations:
+
+- `@DSL` marks a DSL entry function.
+- `@Required` marks builder properties that must be assigned inside the DSL lambda.
+
+Example:
+
+```kotlin
+@DSL
+fun dataSource(block: DataSourceConfiguration.() -> Unit): DataSource = TODO("Impl not relevant")
+
+class DataSourceConfiguration {
+    @Required var url: String? = null
+    @Required var username: String? = null
+    @Required var password: String? = null
+}
+```
+
+If a DSL block does not initialize all required fields, compilation fails:
+
+```kotlin
+val dataSourceA = dataSource {
+    url = "localhost"
+    username = "postgresql"
+    // error: missing password
+}
+
+val dataSourceB = dataSource {
+    url = "localhost"
+    // error: missing username and password
+}
+```
+
+## Modules
 
 This project has three modules:
-- The [`:compiler-plugin`](compiler-plugin/src) module contains the compiler plugin itself.
-- The [`:plugin-annotations`](plugin-annotations/src/commonMain/kotlin) module contains annotations which can be used in
-user code for interacting with compiler plugin.
-- The [`:gradle-plugin`](gradle-plugin/src) module contains a simple Gradle plugin to add the compiler plugin and
-annotation dependency to a Kotlin project. 
 
-Extension point registration:
-- K2 Frontend (FIR) extensions can be registered in `SimplePluginRegistrar`.
-- All other extensions (including K1 frontend and backend) can be registered in `SimplePluginComponentRegistrar`.
+- [`:compiler-plugin`](compiler-plugin/src) — the compiler plugin itself.
+- [`:plugin-annotations`](plugin-annotations/src/commonMain/kotlin) — the runtime annotations used by user code.
+- [`:gradle-plugin`](gradle-plugin/src) — a small Gradle plugin that adds both the compiler plugin and the annotations dependency to a Kotlin project.
+
+## How it works
+
+The implementation is based on the Kotlin **K2/FIR frontend**:
+
+- `SimplePluginRegistrar` registers the FIR extension.
+- `SimpleAdditionalCheckersExtension` contributes a custom FIR function-call checker.
+- The checker detects calls to `@DSL` functions, resolves the receiver type of the lambda, collects `@Required` properties from the builder class, and reports a compilation error when any required properties are missing.
+
+This means the project focuses on **static DSL validation**, not code generation.
 
 ## Tests
 
-The [Kotlin compiler test framework][test-framework] is set up for this project.
-To create a new test, add a new `.kt` file in a [compiler-plugin/testData](compiler-plugin/testData) sub-directory:
-`testData/box` for codegen tests and `testData/diagnostics` for diagnostics tests.
-The generated JUnit 5 test classes will be updated automatically when tests are next run.
-They can be manually updated with the `generateTests` Gradle task as well.
-To aid in running tests, it is recommended to install the [Kotlin Compiler DevKit][test-plugin] IntelliJ plugin,
-which is pre-configured in this repository.
+The Kotlin compiler test framework is set up for this project.
+
+- Add diagnostics tests under `compiler-plugin/testData/diagnostics`.
+- Add box/codegen tests under `compiler-plugin/testData/box`.
+- The generated JUnit 5 test classes are updated automatically when tests run, or manually with the `generateTests` Gradle task.
+
+The current tests cover:
+
+- successful DSL usage
+- missing required DSL properties
+- ordinary box tests for plugin wiring
+
+To aid development, the Kotlin Compiler DevKit IntelliJ plugin is recommended and already configured for this repository.
 
 [//]: # (Links)
 
