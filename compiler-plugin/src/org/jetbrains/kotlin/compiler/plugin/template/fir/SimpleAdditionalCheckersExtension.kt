@@ -24,6 +24,8 @@ import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.expressions.FirVariableAssignment
+import org.jetbrains.kotlin.fir.expressions.FirWhenExpression
+import org.jetbrains.kotlin.fir.expressions.isExhaustive
 import org.jetbrains.kotlin.fir.expressions.toResolvedCallableSymbol
 import org.jetbrains.kotlin.fir.resolve.providers.getRegularClassSymbolByClassId
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
@@ -107,17 +109,18 @@ private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Co
 
     private fun FirBlock?.definitelyAssignedDslProperties(
         requiredProperties: Set<FirPropertySymbol>,
+        assignedBefore: Set<FirPropertySymbol> = emptySet(),
     ): Set<FirPropertySymbol> {
-        if (this == null) return emptySet()
+        if (this == null) return assignedBefore
 
-        var assigned = emptySet<FirPropertySymbol>()
+        var assigned = assignedBefore
         for (statement in statements) {
-            assigned = statement.definitelyAssignedDslProperties(requiredProperties, assigned)
+            assigned = statement.definitelyAssignedDslPropertiesAfter(requiredProperties, assigned)
         }
         return assigned
     }
 
-    private fun FirStatement.definitelyAssignedDslProperties(
+    private fun FirStatement.definitelyAssignedDslPropertiesAfter(
         requiredProperties: Set<FirPropertySymbol>,
         assignedBefore: Set<FirPropertySymbol>,
     ): Set<FirPropertySymbol> = when (this) {
@@ -127,14 +130,33 @@ private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Co
             if (assignedProperty != null && assignedProperty in requiredProperties) assignedBefore + assignedProperty else assignedBefore
         }
 
-        is FirBlock -> {
-            var assigned = assignedBefore
-            for (statement in statements) {
-                assigned = statement.definitelyAssignedDslProperties(requiredProperties, assigned)
-            }
-            assigned
-        }
+        is FirExpression -> this.definitelyAssignedDslPropertiesAfter(requiredProperties, assignedBefore)
 
         else -> assignedBefore
+    }
+
+    private fun FirExpression.definitelyAssignedDslPropertiesAfter(
+        requiredProperties: Set<FirPropertySymbol>,
+        assignedBefore: Set<FirPropertySymbol>,
+    ): Set<FirPropertySymbol> = when (this) {
+        is FirBlock -> this.definitelyAssignedDslProperties(requiredProperties, assignedBefore)
+
+        is FirWhenExpression -> this.definitelyAssignedDslPropertiesAfter(requiredProperties, assignedBefore)
+
+        else -> assignedBefore
+    }
+
+    private fun FirWhenExpression.definitelyAssignedDslPropertiesAfter(
+        requiredProperties: Set<FirPropertySymbol>,
+        assignedBefore: Set<FirPropertySymbol>,
+    ): Set<FirPropertySymbol> {
+        if (!isExhaustive || branches.isEmpty()) return assignedBefore
+
+        var assignedInAllBranches: Set<FirPropertySymbol>? = null
+        for (branch in branches) {
+            val branchAssigned = branch.result.definitelyAssignedDslProperties(requiredProperties, assignedBefore)
+            assignedInAllBranches = assignedInAllBranches?.intersect(branchAssigned)?.toSet() ?: branchAssigned
+        }
+        return assignedInAllBranches ?: assignedBefore
     }
 }

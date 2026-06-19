@@ -1,0 +1,35 @@
+FILE: ifElseMissingAssignment.kt
+    package foo.bar
+
+    @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() public final fun dataSource(block: R|foo/bar/DataSourceConfiguration.() -> kotlin/Unit|): R|foo/bar/DataSource| {
+        ^dataSource R|kotlin/TODO|()
+    }
+    public final class DataSource : R|kotlin/Any| {
+        public constructor(): R|foo/bar/DataSource| {
+            super<R|kotlin/Any|>()
+        }
+
+    }
+    public final class DataSourceConfiguration : R|kotlin/Any| {
+        public constructor(): R|foo/bar/DataSourceConfiguration| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|() public final var url: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+    }
+    public final fun test(condition: R|kotlin/Boolean|): R|kotlin/Unit| {
+        R|foo/bar/dataSource|(<L> = dataSource@fun R|foo/bar/DataSourceConfiguration|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            when () {
+                R|<local>/condition| ->  {
+                    this@R|special/anonymous|.R|foo/bar/DataSourceConfiguration.url| = String(localhost)
+                }
+                else ->  {
+                }
+            }
+
+        }
+        )
+    }

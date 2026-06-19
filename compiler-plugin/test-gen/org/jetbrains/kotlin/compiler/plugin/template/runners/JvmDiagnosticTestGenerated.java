@@ -31,8 +31,32 @@ public class JvmDiagnosticTestGenerated extends AbstractJvmDiagnosticTest {
   }
 
   @Test
+  @TestMetadata("ifElseMissingAssignment.kt")
+  public void testIfElseMissingAssignment() {
+    run("ifElseMissingAssignment.kt");
+  }
+
+  @Test
+  @TestMetadata("ifWithoutElse.kt")
+  public void testIfWithoutElse() {
+    run("ifWithoutElse.kt");
+  }
+
+  @Test
   @TestMetadata("simple.kt")
   public void testSimple() {
     run("simple.kt");
+  }
+
+  @Test
+  @TestMetadata("whenMissingAssignment.kt")
+  public void testWhenMissingAssignment() {
+    run("whenMissingAssignment.kt");
+  }
+
+  @Test
+  @TestMetadata("whenWithoutElse.kt")
+  public void testWhenWithoutElse() {
+    run("whenWithoutElse.kt");
   }
 }

@@ -31,8 +31,20 @@ public class JvmBoxTestGenerated extends AbstractJvmBoxTest {
   }
 
   @Test
+  @TestMetadata("ifElseAllBranchesAssigned.kt")
+  public void testIfElseAllBranchesAssigned() {
+    run("ifElseAllBranchesAssigned.kt");
+  }
+
+  @Test
   @TestMetadata("simple.kt")
   public void testSimple() {
     run("simple.kt");
+  }
+
+  @Test
+  @TestMetadata("whenAllBranchesAssigned.kt")
+  public void testWhenAllBranchesAssigned() {
+    run("whenAllBranchesAssigned.kt");
   }
 }
