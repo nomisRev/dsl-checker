@@ -1,22 +1,37 @@
+@file:OptIn(org.jetbrains.kotlin.fir.declarations.DirectDeclarationsAccess::class, org.jetbrains.kotlin.fir.symbols.SymbolInternals::class)
+
 package org.jetbrains.kotlin.compiler.plugin.template.fir
 
-import org.jetbrains.kotlin.diagnostics.KtDiagnosticFactory0
+import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
+import org.jetbrains.kotlin.diagnostics.KtDiagnosticFactory1
 import org.jetbrains.kotlin.diagnostics.KtDiagnosticFactoryToRendererMap
 import org.jetbrains.kotlin.diagnostics.KtSimpleDiagnostic
 import org.jetbrains.kotlin.diagnostics.Severity
 import org.jetbrains.kotlin.diagnostics.SourceElementPositioningStrategies
-import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.diagnostics.reportOn
 import org.jetbrains.kotlin.diagnostics.rendering.BaseDiagnosticRendererFactory
+import org.jetbrains.kotlin.diagnostics.rendering.Renderer
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.MppCheckerKind
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
-import org.jetbrains.kotlin.fir.analysis.checkers.declaration.DeclarationCheckers
-import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirDeclarationChecker
+import org.jetbrains.kotlin.fir.analysis.checkers.expression.ExpressionCheckers
+import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirFunctionCallChecker
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
-import org.jetbrains.kotlin.fir.declarations.FirFunction
-import org.jetbrains.kotlin.fir.expressions.FirAnnotation
+import org.jetbrains.kotlin.fir.expressions.FirAnonymousFunctionExpression
+import org.jetbrains.kotlin.fir.expressions.FirBlock
+import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
+import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
+import org.jetbrains.kotlin.fir.expressions.FirStatement
+import org.jetbrains.kotlin.fir.expressions.FirVariableAssignment
+import org.jetbrains.kotlin.fir.expressions.toResolvedCallableSymbol
+import org.jetbrains.kotlin.fir.resolve.providers.getRegularClassSymbolByClassId
+import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.types.ConeClassLikeType
+import org.jetbrains.kotlin.fir.types.ConeKotlinType
+import org.jetbrains.kotlin.fir.types.coneType
+import org.jetbrains.kotlin.fir.types.receiverType
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -26,44 +41,100 @@ private val DSL_ANNOTATION_CLASS_ID = ClassId(
     Name.identifier("DSL"),
 )
 
+private val REQUIRED_ANNOTATION_CLASS_ID = ClassId(
+    FqName("org.jetbrains.kotlin.compiler.plugin.template"),
+    Name.identifier("Required"),
+)
+
 private object DslCheckerDiagnosticRendererFactory : BaseDiagnosticRendererFactory() {
     override val MAP by KtDiagnosticFactoryToRendererMap("DslCheckerDiagnostics") { map ->
-        map.put(DSL_FUNCTION_WITH_PARAMETERS, "DSL functions must not declare value parameters")
+        map.put(DSL_CALL_MISSING_REQUIRED_PROPERTIES, "DSL lambda is missing required properties: {0}", Renderer { it })
     }
 }
 
-private val DSL_FUNCTION_WITH_PARAMETERS = KtDiagnosticFactory0(
-    "DSL_FUNCTION_WITH_PARAMETERS",
+private val DSL_CALL_MISSING_REQUIRED_PROPERTIES = KtDiagnosticFactory1<String>(
+    "DSL_CALL_MISSING_REQUIRED_PROPERTIES",
     Severity.ERROR,
-    SourceElementPositioningStrategies.DECLARATION_NAME,
+    SourceElementPositioningStrategies.WHOLE_ELEMENT,
     KtSimpleDiagnostic::class,
     DslCheckerDiagnosticRendererFactory,
 )
 
 class SimpleAdditionalCheckersExtension(session: FirSession) : FirAdditionalCheckersExtension(session) {
-    override val declarationCheckers: DeclarationCheckers = object : DeclarationCheckers() {
-        override val functionCheckers: Set<FirDeclarationChecker<FirFunction>> = setOf(DslFunctionParameterChecker)
+    override val expressionCheckers: ExpressionCheckers = object : ExpressionCheckers() {
+        override val functionCallCheckers = setOf(DslFunctionCallChecker)
     }
 }
 
-private object DslFunctionParameterChecker : FirDeclarationChecker<FirFunction>(MppCheckerKind.Common) {
+private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Common) {
     context(context: CheckerContext, reporter: DiagnosticReporter)
-    override fun check(declaration: FirFunction) {
-        if (!declaration.hasDslAnnotation() || declaration.valueParameters.isEmpty()) return
+    override fun check(expression: FirFunctionCall) {
+        val calleeSymbol = expression.toResolvedCallableSymbol() as? FirNamedFunctionSymbol ?: return
+        if (!calleeSymbol.isDslAnnotated()) return
 
-        val source = declaration.source ?: return
+        val lambdaArgument = expression.argumentList.arguments.filterIsInstance<FirAnonymousFunctionExpression>().singleOrNull() ?: return
+        val receiverType = calleeSymbol.dslReceiverType(context.session) ?: return
+        val requiredProperties = receiverType.requiredDslProperties(context.session)
+        if (requiredProperties.isEmpty()) return
+
+        val assignedProperties = lambdaArgument.anonymousFunction.body.definitelyAssignedDslProperties(requiredProperties)
+        val missingProperties = requiredProperties - assignedProperties
+        if (missingProperties.isEmpty()) return
+
         reporter.reportOn(
-            source,
-            DSL_FUNCTION_WITH_PARAMETERS,
+            expression.source,
+            DSL_CALL_MISSING_REQUIRED_PROPERTIES,
+            missingProperties.joinToString(", ") { it.name.asString() },
             context,
-            SourceElementPositioningStrategies.DECLARATION_NAME,
+            SourceElementPositioningStrategies.WHOLE_ELEMENT,
         )
     }
 
-    private fun FirFunction.hasDslAnnotation(): Boolean = annotations.any { it.matchesDslAnnotation() }
+    private fun FirNamedFunctionSymbol.isDslAnnotated(): Boolean =
+        resolvedAnnotationClassIds.any { it == DSL_ANNOTATION_CLASS_ID }
 
-    private fun FirAnnotation.matchesDslAnnotation(): Boolean {
-        val classLikeType = (annotationTypeRef as? org.jetbrains.kotlin.fir.types.FirResolvedTypeRef)?.coneType as? ConeClassLikeType ?: return false
-        return classLikeType.lookupTag.classId == DSL_ANNOTATION_CLASS_ID
+    private fun FirNamedFunctionSymbol.dslReceiverType(session: FirSession): ConeKotlinType? =
+        fir.valueParameters.singleOrNull()?.returnTypeRef?.coneType?.receiverType(session)
+
+    private fun ConeKotlinType.requiredDslProperties(session: FirSession): Set<FirPropertySymbol> {
+        val classId = (this as? ConeClassLikeType)?.lookupTag?.classId ?: return emptySet()
+        val classSymbol = session.getRegularClassSymbolByClassId(classId) ?: return emptySet()
+        return classSymbol.declarationSymbols
+            .filterIsInstance<FirPropertySymbol>()
+            .filter { it.resolvedAnnotationClassIds.any { annotationClassId -> annotationClassId == REQUIRED_ANNOTATION_CLASS_ID } }
+            .toSet()
+    }
+
+    private fun FirBlock?.definitelyAssignedDslProperties(
+        requiredProperties: Set<FirPropertySymbol>,
+    ): Set<FirPropertySymbol> {
+        if (this == null) return emptySet()
+
+        var assigned = emptySet<FirPropertySymbol>()
+        for (statement in statements) {
+            assigned = statement.definitelyAssignedDslProperties(requiredProperties, assigned)
+        }
+        return assigned
+    }
+
+    private fun FirStatement.definitelyAssignedDslProperties(
+        requiredProperties: Set<FirPropertySymbol>,
+        assignedBefore: Set<FirPropertySymbol>,
+    ): Set<FirPropertySymbol> = when (this) {
+        is FirVariableAssignment -> {
+            val assignedProperty = (lValue as? FirQualifiedAccessExpression)
+                ?.toResolvedCallableSymbol() as? FirPropertySymbol
+            if (assignedProperty != null && assignedProperty in requiredProperties) assignedBefore + assignedProperty else assignedBefore
+        }
+
+        is FirBlock -> {
+            var assigned = assignedBefore
+            for (statement in statements) {
+                assigned = statement.definitelyAssignedDslProperties(requiredProperties, assigned)
+            }
+            assigned
+        }
+
+        else -> assignedBefore
     }
 }
