@@ -1,8 +1,8 @@
 package foo.bar
 
-import org.jetbrains.kotlin.compiler.plugin.template.SomeAnnotation
+import org.jetbrains.kotlin.compiler.plugin.template.DSL
 
-@SomeAnnotation
+@DSL
 fun box(): String {
     val result = MyClass().foo()
     return if (result == "Hello world") { "OK" } else { "Fail: $result" }

@@ -1,3 +1,6 @@
-public abstract interface annotation class org/jetbrains/kotlin/compiler/plugin/template/SomeAnnotation : java/lang/annotation/Annotation {
+public abstract interface annotation class org/jetbrains/kotlin/compiler/plugin/template/DSL : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class org/jetbrains/kotlin/compiler/plugin/template/Required : java/lang/annotation/Annotation {
 }
 
