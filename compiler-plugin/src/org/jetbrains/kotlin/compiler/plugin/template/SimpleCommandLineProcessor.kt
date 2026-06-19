@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 class SimpleCommandLineProcessor : CommandLineProcessor {
     override val pluginId: String
         get() = BuildConfig.KOTLIN_PLUGIN_ID
+
     override val pluginOptions: Collection<CliOption>
         get() = emptyList()
 

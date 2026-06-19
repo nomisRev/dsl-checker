@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrarAdapter
 class SimplePluginComponentRegistrar : CompilerPluginRegistrar() {
     override val pluginId: String
         get() = BuildConfig.KOTLIN_PLUGIN_ID
+
     override val supportsK2: Boolean
         get() = true
 
