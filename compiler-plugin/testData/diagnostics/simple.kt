@@ -5,7 +5,5 @@ package foo.bar
 import org.jetbrains.kotlin.compiler.plugin.template.DSL
 
 @DSL
-fun test() {
-    val s = MyClass().foo()
-    s.<!UNRESOLVED_REFERENCE!>inc<!>() // should be an error
+fun <!DSL_FUNCTION_WITH_PARAMETERS!>test<!>(message: String) {
 }
