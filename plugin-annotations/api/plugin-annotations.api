@@ -2,5 +2,6 @@ public abstract interface annotation class org/jetbrains/kotlin/compiler/plugin/
 }
 
 public abstract interface annotation class org/jetbrains/kotlin/compiler/plugin/template/Required : java/lang/annotation/Annotation {
+	public abstract fun message ()Ljava/lang/String;
 }
 

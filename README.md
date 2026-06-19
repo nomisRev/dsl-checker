@@ -6,6 +6,7 @@ The plugin introduces two runtime annotations:
 
 - `@DSL` marks a DSL entry function.
 - `@Required` marks builder properties that must be assigned inside the DSL lambda.
+  - You can customize the compiler error text with `@Required(message = "...")`.
 
 Example:
 
@@ -14,7 +15,8 @@ Example:
 fun dataSource(block: DataSourceConfiguration.() -> Unit): DataSource = TODO("Impl not relevant")
 
 class DataSourceConfiguration {
-    @Required var url: String? = null
+    @Required(message = "This property is required to connect to the database")
+    var url: String? = null
     @Required var username: String? = null
     @Required var password: String? = null
 }

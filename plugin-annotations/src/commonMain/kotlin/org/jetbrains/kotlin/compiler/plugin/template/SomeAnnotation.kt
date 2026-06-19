@@ -11,4 +11,7 @@ public annotation class DSL
 
 @Target(PROPERTY)
 @Retention(BINARY)
-public annotation class Required
+public annotation class Required(
+    /** Custom message reported when this required property is missing from a DSL block. */
+    val message: String = "",
+)

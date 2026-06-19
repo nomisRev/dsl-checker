@@ -18,15 +18,18 @@ import org.jetbrains.kotlin.fir.analysis.checkers.expression.ExpressionCheckers
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirFunctionCallChecker
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
 import org.jetbrains.kotlin.fir.expressions.FirAnonymousFunctionExpression
+import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
+import org.jetbrains.kotlin.fir.expressions.FirLiteralExpression
 import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.expressions.FirVariableAssignment
 import org.jetbrains.kotlin.fir.expressions.FirWhenExpression
 import org.jetbrains.kotlin.fir.expressions.isExhaustive
 import org.jetbrains.kotlin.fir.expressions.toResolvedCallableSymbol
+import org.jetbrains.kotlin.fir.expressions.unexpandedConeClassLikeType
 import org.jetbrains.kotlin.fir.resolve.providers.getRegularClassSymbolByClassId
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
@@ -50,7 +53,7 @@ private val REQUIRED_ANNOTATION_CLASS_ID = ClassId(
 
 private object DslCheckerDiagnosticRendererFactory : BaseDiagnosticRendererFactory() {
     override val MAP by KtDiagnosticFactoryToRendererMap("DslCheckerDiagnostics") { map ->
-        map.put(DSL_CALL_MISSING_REQUIRED_PROPERTIES, "DSL lambda is missing required properties: {0}", Renderer { it })
+        map.put(DSL_CALL_MISSING_REQUIRED_PROPERTIES, "{0}", Renderer { it })
     }
 }
 
@@ -79,14 +82,20 @@ private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Co
         val requiredProperties = receiverType.requiredDslProperties(context.session)
         if (requiredProperties.isEmpty()) return
 
-        val assignedProperties = lambdaArgument.anonymousFunction.body.definitelyAssignedDslProperties(requiredProperties)
-        val missingProperties = requiredProperties - assignedProperties
+        val assignedProperties = lambdaArgument.anonymousFunction.body.definitelyAssignedDslProperties(requiredProperties.map { it.symbol }.toSet())
+        val missingProperties = requiredProperties.filterNot { it.symbol in assignedProperties }
         if (missingProperties.isEmpty()) return
+
+        val diagnosticMessage = if (missingProperties.size == 1) {
+            missingProperties.single().message
+        } else {
+            "DSL lambda is missing required properties: ${missingProperties.joinToString(", ") { it.message }}"
+        }
 
         reporter.reportOn(
             expression.source,
             DSL_CALL_MISSING_REQUIRED_PROPERTIES,
-            missingProperties.joinToString(", ") { it.name.asString() },
+            diagnosticMessage,
             context,
             SourceElementPositioningStrategies.WHOLE_ELEMENT,
         )
@@ -98,14 +107,37 @@ private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Co
     private fun FirNamedFunctionSymbol.dslReceiverType(session: FirSession): ConeKotlinType? =
         fir.valueParameters.singleOrNull()?.returnTypeRef?.coneType?.receiverType(session)
 
-    private fun ConeKotlinType.requiredDslProperties(session: FirSession): Set<FirPropertySymbol> {
-        val classId = (this as? ConeClassLikeType)?.lookupTag?.classId ?: return emptySet()
-        val classSymbol = session.getRegularClassSymbolByClassId(classId) ?: return emptySet()
+    private data class RequiredDslProperty(
+        val symbol: FirPropertySymbol,
+        val message: String,
+    )
+
+    private fun ConeKotlinType.requiredDslProperties(session: FirSession): List<RequiredDslProperty> {
+        val classId = (this as? ConeClassLikeType)?.lookupTag?.classId ?: return emptyList()
+        val classSymbol = session.getRegularClassSymbolByClassId(classId) ?: return emptyList()
         return classSymbol.declarationSymbols
             .filterIsInstance<FirPropertySymbol>()
-            .filter { it.resolvedAnnotationClassIds.any { annotationClassId -> annotationClassId == REQUIRED_ANNOTATION_CLASS_ID } }
-            .toSet()
+            .mapNotNull { property ->
+                val requiredAnnotation = property.resolvedAnnotationsWithArguments
+                    .firstOrNull { annotation -> annotation.isRequiredAnnotation() }
+                    ?: return@mapNotNull null
+                RequiredDslProperty(
+                    symbol = property,
+                    message = requiredAnnotation.requiredMessage(property),
+                )
+            }
     }
+
+    private fun FirAnnotation.isRequiredAnnotation(): Boolean =
+        unexpandedConeClassLikeType?.lookupTag?.classId == REQUIRED_ANNOTATION_CLASS_ID
+
+    private fun FirAnnotation.requiredMessage(property: FirPropertySymbol): String =
+        annotationArgument("message")?.takeIf { it.isNotBlank() } ?: property.name.asString()
+
+    private fun FirAnnotation.annotationArgument(name: String): String? =
+        argumentMapping.mapping[Name.identifier(name)]
+            ?.let { it as? FirLiteralExpression }
+            ?.value as? String
 
     private fun FirBlock?.definitelyAssignedDslProperties(
         requiredProperties: Set<FirPropertySymbol>,
