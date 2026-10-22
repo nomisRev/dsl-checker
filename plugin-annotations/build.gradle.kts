@@ -3,6 +3,7 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
+    `maven-publish`
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.binary.compatibility.validator)
 }
