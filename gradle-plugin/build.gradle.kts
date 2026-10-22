@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.gradle.plugin)
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 sourceSets {
     main {
         java.setSrcDirs(listOf("src"))
