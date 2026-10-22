@@ -8,17 +8,17 @@ import org.jetbrains.kotlin.diagnostics.KtDiagnosticFactoryToRendererMap
 import org.jetbrains.kotlin.diagnostics.KtSimpleDiagnostic
 import org.jetbrains.kotlin.diagnostics.Severity
 import org.jetbrains.kotlin.diagnostics.SourceElementPositioningStrategies
-import org.jetbrains.kotlin.diagnostics.reportOn
 import org.jetbrains.kotlin.diagnostics.rendering.BaseDiagnosticRendererFactory
 import org.jetbrains.kotlin.diagnostics.rendering.Renderer
+import org.jetbrains.kotlin.diagnostics.reportOn
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.MppCheckerKind
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.ExpressionCheckers
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirFunctionCallChecker
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
-import org.jetbrains.kotlin.fir.expressions.FirAnonymousFunctionExpression
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
+import org.jetbrains.kotlin.fir.expressions.FirAnonymousFunctionExpression
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
@@ -51,6 +51,11 @@ private val REQUIRED_ANNOTATION_CLASS_ID = ClassId(
     Name.identifier("Required"),
 )
 
+private val ONLY_IN_COMBINATION_ANNOTATION_CLASS_ID = ClassId(
+    FqName("org.jetbrains.kotlin.compiler.plugin.template"),
+    Name.identifier("OnlyInCombination"),
+)
+
 private object DslCheckerDiagnosticRendererFactory : BaseDiagnosticRendererFactory() {
     override val MAP by KtDiagnosticFactoryToRendererMap("DslCheckerDiagnostics") { map ->
         map.put(DSL_CALL_MISSING_REQUIRED_PROPERTIES, "{0}", Renderer { it })
@@ -74,15 +79,26 @@ class SimpleAdditionalCheckersExtension(session: FirSession) : FirAdditionalChec
 private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Common) {
     context(context: CheckerContext, reporter: DiagnosticReporter)
     override fun check(expression: FirFunctionCall) {
+        checkRequired(expression)
+        checkOnlyInCombination(expression)
+    }
+
+    context(context: CheckerContext, reporter: DiagnosticReporter)
+    private fun checkRequired(expression: FirFunctionCall): Unit {
         val calleeSymbol = expression.toResolvedCallableSymbol() as? FirNamedFunctionSymbol ?: return
         if (!calleeSymbol.isDslAnnotated()) return
 
-        val lambdaArgument = expression.argumentList.arguments.filterIsInstance<FirAnonymousFunctionExpression>().singleOrNull() ?: return
+        val lambdaArgument =
+            expression.argumentList.arguments.filterIsInstance<FirAnonymousFunctionExpression>().singleOrNull()
+                ?: return
         val receiverType = calleeSymbol.dslReceiverType(context.session) ?: return
+
         val requiredProperties = receiverType.requiredDslProperties(context.session)
         if (requiredProperties.isEmpty()) return
 
-        val assignedProperties = lambdaArgument.anonymousFunction.body.definitelyAssignedDslProperties(requiredProperties.map { it.symbol }.toSet())
+        val assignedProperties =
+            lambdaArgument.anonymousFunction.body.definitelyAssignedDslProperties(requiredProperties.map { it.symbol }
+                .toSet())
         val missingProperties = requiredProperties.filterNot { it.symbol in assignedProperties }
         if (missingProperties.isEmpty()) return
 
@@ -90,6 +106,45 @@ private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Co
             missingProperties.single().message
         } else {
             "DSL lambda is missing required properties: ${missingProperties.joinToString(", ") { it.message }}"
+        }
+
+        reporter.reportOn(
+            expression.source,
+            DSL_CALL_MISSING_REQUIRED_PROPERTIES,
+            diagnosticMessage,
+            context,
+            SourceElementPositioningStrategies.WHOLE_ELEMENT,
+        )
+    }
+
+    context(context: CheckerContext, reporter: DiagnosticReporter)
+    private fun checkOnlyInCombination(expression: FirFunctionCall): Unit {
+        val calleeSymbol = expression.toResolvedCallableSymbol() as? FirNamedFunctionSymbol ?: return
+        if (!calleeSymbol.isDslAnnotated()) return
+
+        val lambdaArgument =
+            expression.argumentList.arguments.filterIsInstance<FirAnonymousFunctionExpression>().singleOrNull()
+                ?: return
+        val receiverType = calleeSymbol.dslReceiverType(context.session) ?: return
+
+        val onlyInCombinationProperties = receiverType.groupedDslProperties(context.session, ONLY_IN_COMBINATION_ANNOTATION_CLASS_ID)
+        if (onlyInCombinationProperties.isEmpty()) return
+
+        val assignedProperties = lambdaArgument.anonymousFunction.body.definitelyAssignedDslProperties(
+            onlyInCombinationProperties.map { it.symbol }.toSet()
+        )
+
+        val missingProperties = onlyInCombinationProperties
+            .groupBy { it.group }
+            .values
+            .filter { group -> group.any { it.symbol in assignedProperties } }
+            .flatMap { group -> group.filterNot { it.symbol in assignedProperties } }
+        if (missingProperties.isEmpty()) return
+
+        val diagnosticMessage = if (missingProperties.size == 1) {
+            missingProperties.single().message
+        } else {
+            "DSL lambda is missing properties that must be set in combination: ${missingProperties.joinToString(", ") { it.message }}"
         }
 
         reporter.reportOn(
@@ -112,6 +167,12 @@ private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Co
         val message: String,
     )
 
+    private data class GroupedDslProperty(
+        val symbol: FirPropertySymbol,
+        val group: String,
+        val message: String,
+    )
+
     private fun ConeKotlinType.requiredDslProperties(session: FirSession): List<RequiredDslProperty> {
         val classId = (this as? ConeClassLikeType)?.lookupTag?.classId ?: return emptyList()
         val classSymbol = session.getRegularClassSymbolByClassId(classId) ?: return emptyList()
@@ -128,11 +189,34 @@ private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Co
             }
     }
 
+    private fun ConeKotlinType.groupedDslProperties(session: FirSession, annotationClassId: ClassId): List<GroupedDslProperty> {
+        val classId = (this as? ConeClassLikeType)?.lookupTag?.classId ?: return emptyList()
+        val classSymbol = session.getRegularClassSymbolByClassId(classId) ?: return emptyList()
+        return classSymbol.declarationSymbols
+            .filterIsInstance<FirPropertySymbol>()
+            .mapNotNull { property ->
+                val groupAnnotation = property.resolvedAnnotationsWithArguments
+                    .firstOrNull { annotation -> annotation.unexpandedConeClassLikeType?.lookupTag?.classId == annotationClassId }
+                    ?: return@mapNotNull null
+                GroupedDslProperty(
+                    symbol = property,
+                    group = groupAnnotation.groupName(),
+                    message = groupAnnotation.groupMessage(property),
+                )
+            }
+    }
+
     private fun FirAnnotation.isRequiredAnnotation(): Boolean =
         unexpandedConeClassLikeType?.lookupTag?.classId == REQUIRED_ANNOTATION_CLASS_ID
 
     private fun FirAnnotation.requiredMessage(property: FirPropertySymbol): String =
         annotationArgument("message")?.takeIf { it.isNotBlank() } ?: property.name.asString()
+
+    private fun FirAnnotation.groupMessage(property: FirPropertySymbol): String =
+        annotationArgument("message")?.takeIf { it.isNotBlank() } ?: property.name.asString()
+
+    private fun FirAnnotation.groupName(): String =
+        annotationArgument("group")!!
 
     private fun FirAnnotation.annotationArgument(name: String): String? =
         argumentMapping.mapping[Name.identifier(name)]
