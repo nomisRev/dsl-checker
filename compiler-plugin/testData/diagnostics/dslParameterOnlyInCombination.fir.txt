@@ -1,0 +1,34 @@
+FILE: dslParameterOnlyInCombination.kt
+    package foo.bar
+
+    public final class Auth : R|kotlin/Any| {
+        public constructor(): R|foo/bar/Auth| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/OnlyInCombination|(group = String(auth) [evaluated = String(auth)], message = String(user must be set with password) [evaluated = String(user must be set with password)]) public final var user: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/OnlyInCombination|(group = String(auth) [evaluated = String(auth)], message = String(password must be set with user) [evaluated = String(password must be set with user)]) public final var password: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+    }
+    public final fun auth(id: R|kotlin/String|, @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() block: R|foo/bar/Auth.() -> kotlin/Unit|): R|kotlin/Unit| {
+    }
+    public final fun test(): R|kotlin/Unit| {
+        R|foo/bar/auth|(String(a), <L> = auth@fun R|foo/bar/Auth|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|foo/bar/Auth.user| = String(u)
+        }
+        )
+        R|foo/bar/auth|(String(a), <L> = auth@fun R|foo/bar/Auth|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|foo/bar/Auth.user| = String(u)
+            this@R|special/anonymous|.R|foo/bar/Auth.password| = String(p)
+        }
+        )
+        R|foo/bar/auth|(String(a), <L> = auth@fun R|foo/bar/Auth|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@auth Unit
+        }
+        )
+    }

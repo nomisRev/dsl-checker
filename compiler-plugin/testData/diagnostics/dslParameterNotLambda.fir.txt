@@ -1,0 +1,29 @@
+FILE: dslParameterNotLambda.kt
+    package foo.bar
+
+    public final class Plain : R|kotlin/Any| {
+        public constructor(): R|foo/bar/Plain| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|(message = String(name must be set) [evaluated = String(name must be set)]) public final var name: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+    }
+    public final fun named(id: R|kotlin/String|, @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() block: R|foo/bar/Plain.() -> kotlin/Unit| = fun R|foo/bar/Plain|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+        ^ Unit
+    }
+    ): R|foo/bar/Plain| {
+        ^named R|foo/bar/Plain.Plain|().R|kotlin/apply|<R|foo/bar/Plain|>(R|<local>/block|)
+    }
+    public final fun withoutReceiver(id: R|kotlin/String|, @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() block: R|(foo/bar/Plain) -> kotlin/Unit|): R|kotlin/Unit| {
+    }
+    public final fun test(configure: R|foo/bar/Plain.() -> kotlin/Unit|): R|kotlin/Unit| {
+        R|foo/bar/named|(String(a), R|<local>/configure|)
+        R|foo/bar/named|(String(a))
+        R|foo/bar/withoutReceiver|(String(a), <L> = withoutReceiver@fun <anonymous>(it: R|foo/bar/Plain|): R|kotlin/Unit| <inline=NoInline>  {
+            ^@withoutReceiver Unit
+        }
+        )
+    }

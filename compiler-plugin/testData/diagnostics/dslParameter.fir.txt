@@ -1,0 +1,34 @@
+FILE: dslParameter.kt
+    package foo.bar
+
+    public final class Plain : R|kotlin/Any| {
+        public constructor(): R|foo/bar/Plain| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|(message = String(name must be set) [evaluated = String(name must be set)]) public final var name: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+    }
+    public final fun named(id: R|kotlin/String|, @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() block: R|foo/bar/Plain.() -> kotlin/Unit|): R|foo/bar/Plain| {
+        ^named R|foo/bar/Plain.Plain|().R|kotlin/apply|<R|foo/bar/Plain|>(R|<local>/block|)
+    }
+    public final fun test(): R|kotlin/Unit| {
+        R|foo/bar/named|(String(a), <L> = named@fun R|foo/bar/Plain|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@named Unit
+        }
+        )
+        R|foo/bar/named|(String(a), <L> = named@fun R|foo/bar/Plain|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|foo/bar/Plain.name| = String(x)
+        }
+        )
+        R|foo/bar/named|(String(a), named@fun R|foo/bar/Plain|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@named Unit
+        }
+        )
+        R|foo/bar/named|(named@fun R|foo/bar/Plain|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|foo/bar/Plain.name| = String(x)
+        }
+        , String(a))
+    }

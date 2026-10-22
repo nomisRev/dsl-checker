@@ -4,7 +4,9 @@ This repository contains a Kotlin compiler plugin that performs **compile-time v
 
 The plugin introduces two runtime annotations:
 
-- `@DSL` marks a DSL entry function.
+- `@DSL` marks a DSL entry function or a lambda parameter of a DSL function.
+  - On a function, the function must have exactly one parameter, a lambda with a receiver.
+  - On a parameter, the parameter must be a lambda with a receiver. The function can have other parameters.
 - `@Required` marks builder properties that must be assigned inside the DSL lambda.
   - You can customize the compiler error text with `@Required(message = "...")`.
 
@@ -37,6 +39,17 @@ val dataSourceB = dataSource {
 }
 ```
 
+When the DSL function has more parameters, put `@DSL` on the lambda parameter. The checker then reports the error on the lambda:
+
+```kotlin
+fun namedDataSource(name: String, @DSL block: DataSourceConfiguration.() -> Unit): DataSource = TODO("Impl not relevant")
+
+val dataSourceC = namedDataSource("main") {
+    url = "localhost"
+    // error: missing username and password
+}
+```
+
 ## Modules
 
 This project has three modules:
@@ -51,7 +64,7 @@ The implementation is based on the Kotlin **K2/FIR frontend**:
 
 - `SimplePluginRegistrar` registers the FIR extension.
 - `SimpleAdditionalCheckersExtension` contributes a custom FIR function-call checker.
-- The checker detects calls to `@DSL` functions, resolves the receiver type of the lambda, collects `@Required` properties from the builder class, and reports a compilation error when any required properties are missing.
+- The checker detects calls to `@DSL` functions and the lambdas passed to `@DSL` parameters, resolves the receiver type of the lambda, collects `@Required` properties from the builder class, and reports a compilation error when any required properties are missing.
 
 This means the project focuses on **static DSL validation**, not code generation.
 

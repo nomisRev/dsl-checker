@@ -31,6 +31,30 @@ public class JvmDiagnosticTestGenerated extends AbstractJvmDiagnosticTest {
   }
 
   @Test
+  @TestMetadata("dslParameter.kt")
+  public void testDslParameter() {
+    run("dslParameter.kt");
+  }
+
+  @Test
+  @TestMetadata("dslParameterNotLambda.kt")
+  public void testDslParameterNotLambda() {
+    run("dslParameterNotLambda.kt");
+  }
+
+  @Test
+  @TestMetadata("dslParameterOnlyInCombination.kt")
+  public void testDslParameterOnlyInCombination() {
+    run("dslParameterOnlyInCombination.kt");
+  }
+
+  @Test
+  @TestMetadata("dslParameterTwoLambdas.kt")
+  public void testDslParameterTwoLambdas() {
+    run("dslParameterTwoLambdas.kt");
+  }
+
+  @Test
   @TestMetadata("ifElseMissingAssignment.kt")
   public void testIfElseMissingAssignment() {
     run("ifElseMissingAssignment.kt");

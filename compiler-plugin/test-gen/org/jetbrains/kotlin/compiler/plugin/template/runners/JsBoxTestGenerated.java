@@ -31,6 +31,12 @@ public class JsBoxTestGenerated extends AbstractJsBoxTest {
   }
 
   @Test
+  @TestMetadata("dslParameter.kt")
+  public void testDslParameter() {
+    run("dslParameter.kt");
+  }
+
+  @Test
   @TestMetadata("ifElseAllBranchesAssigned.kt")
   public void testIfElseAllBranchesAssigned() {
     run("ifElseAllBranchesAssigned.kt");

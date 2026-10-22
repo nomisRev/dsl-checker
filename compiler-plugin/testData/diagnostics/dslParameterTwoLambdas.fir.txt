@@ -1,0 +1,57 @@
+FILE: dslParameterTwoLambdas.kt
+    package foo.bar
+
+    public final class First : R|kotlin/Any| {
+        public constructor(): R|foo/bar/First| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|(message = String(first name must be set) [evaluated = String(first name must be set)]) public final var name: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+    }
+    public final class Second : R|kotlin/Any| {
+        public constructor(): R|foo/bar/Second| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|(message = String(second name must be set) [evaluated = String(second name must be set)]) public final var name: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+    }
+    public final fun pair(@R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() first: R|foo/bar/First.() -> kotlin/Unit|, @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() second: R|foo/bar/Second.() -> kotlin/Unit|, other: R|foo/bar/First.() -> kotlin/Unit|): R|kotlin/Unit| {
+    }
+    public final fun test(): R|kotlin/Unit| {
+        R|foo/bar/pair|(pair@fun R|foo/bar/First|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|foo/bar/First.name| = String(a)
+        }
+        , pair@fun R|foo/bar/Second|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@pair Unit
+        }
+        , <L> = pair@fun R|foo/bar/First|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@pair Unit
+        }
+        )
+        R|foo/bar/pair|(pair@fun R|foo/bar/First|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@pair Unit
+        }
+        , pair@fun R|foo/bar/Second|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@pair Unit
+        }
+        , <L> = pair@fun R|foo/bar/First|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@pair Unit
+        }
+        )
+        R|foo/bar/pair|(pair@fun R|foo/bar/First|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|foo/bar/First.name| = String(a)
+        }
+        , pair@fun R|foo/bar/Second|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|foo/bar/Second.name| = String(b)
+        }
+        , <L> = pair@fun R|foo/bar/First|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@pair Unit
+        }
+        )
+    }
