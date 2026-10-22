@@ -55,6 +55,12 @@ public class JvmDiagnosticTestGenerated extends AbstractJvmDiagnosticTest {
   }
 
   @Test
+  @TestMetadata("genericReceiver.kt")
+  public void testGenericReceiver() {
+    run("genericReceiver.kt");
+  }
+
+  @Test
   @TestMetadata("ifElseMissingAssignment.kt")
   public void testIfElseMissingAssignment() {
     run("ifElseMissingAssignment.kt");

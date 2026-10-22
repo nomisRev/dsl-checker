@@ -42,6 +42,7 @@ import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.coneType
 import org.jetbrains.kotlin.fir.types.receiverType
+import org.jetbrains.kotlin.fir.unwrapSubstitutionOverrides
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -259,8 +260,9 @@ private object DslFunctionCallChecker : FirFunctionCallChecker(MppCheckerKind.Co
         assignedBefore: Set<FirPropertySymbol>,
     ): Set<FirPropertySymbol> = when (this) {
         is FirVariableAssignment -> {
-            val assignedProperty = (lValue as? FirQualifiedAccessExpression)
-                ?.toResolvedCallableSymbol() as? FirPropertySymbol
+            val assignedProperty = ((lValue as? FirQualifiedAccessExpression)
+                ?.toResolvedCallableSymbol() as? FirPropertySymbol)
+                ?.unwrapSubstitutionOverrides()
             if (assignedProperty != null && assignedProperty in requiredProperties) assignedBefore + assignedProperty else assignedBefore
         }
 

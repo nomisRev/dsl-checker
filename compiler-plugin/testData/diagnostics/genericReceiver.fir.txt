@@ -1,0 +1,80 @@
+FILE: genericReceiver.kt
+    package foo.bar
+
+    public final class Generic<T> : R|kotlin/Any| {
+        public constructor<T>(): R|foo/bar/Generic<T>| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|(message = String(name must be set) [evaluated = String(name must be set)]) public final var name: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/Required|(message = String(value must be set) [evaluated = String(value must be set)]) public final var value: R|T?| = Null(null)
+            public get(): R|T?|
+            public set(value: R|T?|): R|kotlin/Unit|
+
+    }
+    @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() public final fun <T> generic(block: R|foo/bar/Generic<T>.() -> kotlin/Unit|): R|foo/bar/Generic<T>| {
+        ^generic R|foo/bar/Generic.Generic|<R|T|>().R|kotlin/apply|<R|foo/bar/Generic<T>|>(R|<local>/block|)
+    }
+    @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() public final fun genericString(block: R|foo/bar/Generic<kotlin/String>.() -> kotlin/Unit|): R|foo/bar/Generic<kotlin/String>| {
+        ^genericString R|foo/bar/Generic.Generic|<R|kotlin/String|>().R|kotlin/apply|<R|foo/bar/Generic<kotlin/String>|>(R|<local>/block|)
+    }
+    public final fun <T> named(id: R|kotlin/String|, @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() block: R|foo/bar/Generic<T>.() -> kotlin/Unit|): R|foo/bar/Generic<T>| {
+        ^named R|foo/bar/Generic.Generic|<R|T|>().R|kotlin/apply|<R|foo/bar/Generic<T>|>(R|<local>/block|)
+    }
+    public final class GenericAuth<T> : R|kotlin/Any| {
+        public constructor<T>(): R|foo/bar/GenericAuth<T>| {
+            super<R|kotlin/Any|>()
+        }
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/OnlyInCombination|(group = String(auth) [evaluated = String(auth)], message = String(user must be set with password) [evaluated = String(user must be set with password)]) public final var user: R|T?| = Null(null)
+            public get(): R|T?|
+            public set(value: R|T?|): R|kotlin/Unit|
+
+        @R|org/jetbrains/kotlin/compiler/plugin/template/OnlyInCombination|(group = String(auth) [evaluated = String(auth)], message = String(password must be set with user) [evaluated = String(password must be set with user)]) public final var password: R|kotlin/String?| = Null(null)
+            public get(): R|kotlin/String?|
+            public set(value: R|kotlin/String?|): R|kotlin/Unit|
+
+    }
+    @R|org/jetbrains/kotlin/compiler/plugin/template/DSL|() public final fun <T> auth(block: R|foo/bar/GenericAuth<T>.() -> kotlin/Unit|): R|kotlin/Unit| {
+    }
+    public final fun test(): R|kotlin/Unit| {
+        R|foo/bar/generic|<R|kotlin/Int|>(<L> = generic@fun R|foo/bar/Generic<kotlin/Int>|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/Generic.name: R|kotlin/String?|>| = String(a)
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/Generic.value: R|kotlin/Int?|>| = Int(1)
+        }
+        )
+        R|foo/bar/genericString|(<L> = genericString@fun R|foo/bar/Generic<kotlin/String>|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/Generic.name: R|kotlin/String?|>| = String(a)
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/Generic.value: R|kotlin/String?|>| = String(b)
+        }
+        )
+        R|foo/bar/named|<R|kotlin/Int|>(String(a), <L> = named@fun R|foo/bar/Generic<kotlin/Int>|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/Generic.name: R|kotlin/String?|>| = String(a)
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/Generic.value: R|kotlin/Int?|>| = Int(1)
+        }
+        )
+        R|foo/bar/generic|<R|kotlin/Int|>(<L> = generic@fun R|foo/bar/Generic<kotlin/Int>|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/Generic.name: R|kotlin/String?|>| = String(a)
+        }
+        )
+        R|foo/bar/genericString|(<L> = genericString@fun R|foo/bar/Generic<kotlin/String>|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            ^@genericString Unit
+        }
+        )
+        R|foo/bar/named|<R|kotlin/Int|>(String(a), <L> = named@fun R|foo/bar/Generic<kotlin/Int>|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/Generic.value: R|kotlin/Int?|>| = Int(1)
+        }
+        )
+        R|foo/bar/auth|<R|kotlin/Int|>(<L> = auth@fun R|foo/bar/GenericAuth<kotlin/Int>|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/GenericAuth.user: R|kotlin/Int?|>| = Int(1)
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/GenericAuth.password: R|kotlin/String?|>| = String(p)
+        }
+        )
+        R|foo/bar/auth|<R|kotlin/Int|>(<L> = auth@fun R|foo/bar/GenericAuth<kotlin/Int>|.<anonymous>(): R|kotlin/Unit| <inline=NoInline>  {
+            this@R|special/anonymous|.R|SubstitutionOverride<foo/bar/GenericAuth.user: R|kotlin/Int?|>| = Int(1)
+        }
+        )
+    }
