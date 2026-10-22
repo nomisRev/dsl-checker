@@ -7,6 +7,6 @@ plugins {
 }
 
 allprojects {
-    group = "org.jetbrains.kotlin.compiler.plugin.template"
+    group = "io.github.nomisRev"
     version = "0.1.0-SNAPSHOT"
 }
